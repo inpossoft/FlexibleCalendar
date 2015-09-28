@@ -184,6 +184,7 @@ public class FlexibleCalendarView extends LinearLayout implements
     private int monthViewBackground;
     private int weekViewBackground;
     private boolean showDatesOutsideMonth;
+    private boolean disableAutoDateSelection;
 
     /**
      * Reset adapters flag used internally
@@ -271,6 +272,10 @@ public class FlexibleCalendarView extends LinearLayout implements
         monthViewPager.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         monthViewPager.addOnPageChangeListener(new MonthChangeListener());
+        if(!disableAutoDateSelection){
+            selectedDateItem = new DateItem(displayYear,displayMonth,startDisplayDay);
+            monthViewPagerAdapter.setSelectedItem(selectedDateItem);
+        }
         currentMonth = new MonthItem(displayYear, displayMonth);
 
         this.addView(monthViewPager);
@@ -280,9 +285,16 @@ public class FlexibleCalendarView extends LinearLayout implements
         TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.FlexibleCalendarView);
         try {
             Calendar cal = Calendar.getInstance(FlexibleCalendarHelper.getLocale(context));
-            displayMonth = a.getInteger(R.styleable.FlexibleCalendarView_startDisplayMonth, cal.get(Calendar.MONTH));
-            displayYear = a.getInteger(R.styleable.FlexibleCalendarView_startDisplayYear, cal.get(Calendar.YEAR));
-            startDisplayDay = cal.get(Calendar.DAY_OF_MONTH);
+            displayMonth = a.getInteger(R.styleable.FlexibleCalendarView_startDisplayMonth,-1);
+            displayYear = a.getInteger(R.styleable.FlexibleCalendarView_startDisplayYear, -1);
+            //if display month or display year is not set then select then set display values to current day
+            startDisplayDay = displayMonth <= 0 || displayYear <= 0 ? cal.get(Calendar.DAY_OF_MONTH) : 1;
+            if(displayMonth<=0){
+                displayMonth = cal.get(Calendar.MONTH);
+            }
+            if(displayYear<=0){
+                displayYear = cal.get(Calendar.YEAR);
+            }
 
             weekdayHorizontalSpacing = (int) a.getDimension(R.styleable.FlexibleCalendarView_weekDayHorizontalSpacing, 0);
             weekdayVerticalSpacing = (int) a.getDimension(R.styleable.FlexibleCalendarView_weekDayVerticalSpacing, 0);
@@ -293,6 +305,9 @@ public class FlexibleCalendarView extends LinearLayout implements
             weekViewBackground = a.getResourceId(R.styleable.FlexibleCalendarView_weekViewBackground, android.R.color.transparent);
 
             showDatesOutsideMonth = a.getBoolean(R.styleable.FlexibleCalendarView_showDatesOutsideMonth, false);
+
+            //disable auto selection if set to true
+            disableAutoDateSelection = a.getBoolean(R.styleable.FlexibleCalendarView_disableAutoDateSelection,false);
 
             startDayOfTheWeek = a.getInt(R.styleable.FlexibleCalendarView_startDayOfTheWeek, Calendar.SUNDAY);
             if (startDayOfTheWeek < 1 || startDayOfTheWeek > 7) {
@@ -333,7 +348,12 @@ public class FlexibleCalendarView extends LinearLayout implements
 
 
             //the month view pager adater will update here again
-            monthViewPagerAdapter.refreshDateAdapters(position % MonthViewPagerAdapter.VIEWS_IN_PAGER, selectedDateItem, resetAdapters);
+            if(disableAutoDateSelection){
+                monthViewPagerAdapter.refreshDateAdapters(position % MonthViewPagerAdapter.VIEWS_IN_PAGER, currentMonth, resetAdapters);
+            }else{
+                //the month view pager adater will update here again
+                monthViewPagerAdapter.refreshDateAdapters(position % MonthViewPagerAdapter.VIEWS_IN_PAGER, newDateItem, resetAdapters);
+            }
 
             //update last position
             lastPosition = position;

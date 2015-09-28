@@ -9,6 +9,7 @@ import android.widget.GridView;
 import android.widget.LinearLayout;
 
 import com.p_v.flexiblecalendar.entity.DateItem;
+import com.p_v.flexiblecalendar.entity.MonthItem;
 import com.p_v.flexiblecalendar.view.ICellViewDrawer;
 import com.p_v.flexiblecalendar.view.IDateCellViewDrawer;
 import com.p_v.fliexiblecalendar.R;
@@ -88,6 +89,26 @@ public class MonthViewPagerAdapter extends PagerAdapter {
         FlexibleCalendarHelper.previousMonth(currentAdapter.getYear(), currentAdapter.getMonth(), nextDate);
         dateAdapters.get((position + 3) % VIEWS_IN_PAGER).initialize(nextDate[0], nextDate[1], startDayOfTheWeek);
 
+    }
+
+
+    public void refreshDateAdapters(int position, MonthItem monthItem, boolean refreshAll){
+        FlexibleCalendarGridAdapter currentAdapter = dateAdapters.get(position);
+        if(refreshAll){
+            //refresh all used when go to current month is called to refresh all the adapters
+            currentAdapter.initialize(monthItem.getYear(),monthItem.getMonth(),startDayOfTheWeek);
+        }
+
+        int[] nextDate = new int[2];
+        FlexibleCalendarHelper.nextMonth(currentAdapter.getYear(), currentAdapter.getMonth(), nextDate);
+
+        dateAdapters.get((position + 1) % VIEWS_IN_PAGER).initialize(nextDate[0], nextDate[1],startDayOfTheWeek);
+
+        FlexibleCalendarHelper.nextMonth(nextDate[0], nextDate[1], nextDate);
+        dateAdapters.get((position + 2) % VIEWS_IN_PAGER).initialize(nextDate[0], nextDate[1],startDayOfTheWeek);
+
+        FlexibleCalendarHelper.previousMonth(currentAdapter.getYear(), currentAdapter.getMonth(), nextDate);
+        dateAdapters.get((position + 3) % VIEWS_IN_PAGER).initialize(nextDate[0], nextDate[1], startDayOfTheWeek);
     }
 
     public FlexibleCalendarGridAdapter getMonthAdapterAtPosition(int position){
