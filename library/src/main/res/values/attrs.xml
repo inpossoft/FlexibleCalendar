@@ -29,6 +29,10 @@
             <enum name="FRIDAY" value="6"/>
             <enum name="SATURDAY" value="7"/>
         </attr>
+        <attr name="selectedStateType" format="enum">
+            <enum name="SingleSelected" value="0"/>
+            <enum name="MultipleSelected" value="1"/>
+        </attr>
     </declare-styleable>
     <declare-styleable name="CellState">
         <attr name="state_date_regular" format="boolean"/>

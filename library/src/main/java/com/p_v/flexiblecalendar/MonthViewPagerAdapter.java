@@ -14,6 +14,7 @@ import com.p_v.flexiblecalendar.view.IDateCellViewDrawer;
 import com.p_v.fliexiblecalendar.R;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -22,6 +23,11 @@ import java.util.List;
 public class MonthViewPagerAdapter extends PagerAdapter {
 
     public static final int VIEWS_IN_PAGER = 4;
+
+    public enum CalendarType {
+        Single,
+        Multiple
+    }
 
     private Context context;
     private List<FlexibleCalendarGridAdapter> dateAdapters;
@@ -33,21 +39,30 @@ public class MonthViewPagerAdapter extends PagerAdapter {
     private boolean showDatesOutsideMonth;
     private boolean refreshMonthViewAdpater;
     private int startDayOfTheWeek;
-	private boolean decorateDatesOutsideMonth;
+    private boolean decorateDatesOutsideMonth;
+    private CalendarType calendarType;
+    private int year;
+    private int month;
 
-	public MonthViewPagerAdapter(Context context, int year, int month,
+    private List<Date> datesWithEventsForMultiple;
+
+    public MonthViewPagerAdapter(Context context, int year, int month,
                                  FlexibleCalendarGridAdapter.OnDateCellItemClickListener onDateCellItemClickListener,
-                                 boolean showDatesOutsideMonth, boolean decorateDatesOutsideMonth, int startDayOfTheWeek){
+                                 boolean showDatesOutsideMonth, boolean decorateDatesOutsideMonth, int startDayOfTheWeek, int type){
         this.context = context;
         this.dateAdapters = new ArrayList<>(VIEWS_IN_PAGER);
         this.onDateCellItemClickListener = onDateCellItemClickListener;
         this.showDatesOutsideMonth = showDatesOutsideMonth;
-		this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
+        this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
         this.startDayOfTheWeek = startDayOfTheWeek;
+        calendarType =  type == 0 ? CalendarType.Single : CalendarType.Multiple;
+        this.year = year;
+        this.month = month;
         initializeDateAdapters(year, month);
     }
 
     private void initializeDateAdapters(int year, int month){
+        dateAdapters.clear();
         int pYear;
         int pMonth;
         if(month==0){
@@ -59,7 +74,7 @@ public class MonthViewPagerAdapter extends PagerAdapter {
         }
 
         for(int i=0;i<VIEWS_IN_PAGER - 1;i++){
-            dateAdapters.add(new FlexibleCalendarGridAdapter(context,year,month,showDatesOutsideMonth,decorateDatesOutsideMonth,startDayOfTheWeek));
+            dateAdapters.add(new FlexibleCalendarGridAdapter(context,year,month,showDatesOutsideMonth,decorateDatesOutsideMonth,startDayOfTheWeek, calendarType, datesWithEventsForMultiple));
             if(month==11){
                 year++;
                 month =0;
@@ -67,7 +82,7 @@ public class MonthViewPagerAdapter extends PagerAdapter {
                 month++;
             }
         }
-        dateAdapters.add(new FlexibleCalendarGridAdapter(context, pYear, pMonth, showDatesOutsideMonth, decorateDatesOutsideMonth, startDayOfTheWeek));
+        dateAdapters.add(new FlexibleCalendarGridAdapter(context, pYear, pMonth, showDatesOutsideMonth, decorateDatesOutsideMonth, startDayOfTheWeek, calendarType, datesWithEventsForMultiple));
     }
 
     public void refreshDateAdapters(int position, SelectedDateItem selectedDateItem,boolean refreshAll){
@@ -169,12 +184,12 @@ public class MonthViewPagerAdapter extends PagerAdapter {
         }
     }
 
-	public void setDecorateDatesOutsideMonth(boolean decorateDatesOutsideMonth) {
-		this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
-		for(FlexibleCalendarGridAdapter adapter : dateAdapters) {
-			adapter.setDecorateDatesOutsideMonth(decorateDatesOutsideMonth);
-		}
-	}
+    public void setDecorateDatesOutsideMonth(boolean decorateDatesOutsideMonth) {
+        this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
+        for(FlexibleCalendarGridAdapter adapter : dateAdapters) {
+            adapter.setDecorateDatesOutsideMonth(decorateDatesOutsideMonth);
+        }
+    }
 
     @Override
     public int getItemPosition(Object object) {
@@ -195,5 +210,14 @@ public class MonthViewPagerAdapter extends PagerAdapter {
         for(FlexibleCalendarGridAdapter adapter : dateAdapters){
             adapter.setFirstDayOfTheWeek(startDayOfTheWeek);
         }
+    }
+
+    public void setDatesWithEventsForMultiple(List<Date> datesWithEventsForMultiple) {
+        this.datesWithEventsForMultiple = datesWithEventsForMultiple;
+        this.initializeDateAdapters(this.year, this.month);
+    }
+
+    public List<Date> getDatesWithEventsForMultiple() {
+        return datesWithEventsForMultiple;
     }
 }

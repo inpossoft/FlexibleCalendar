@@ -14,6 +14,8 @@ import com.p_v.flexiblecalendar.view.IDateCellViewDrawer;
 import com.p_v.fliexiblecalendar.R;
 
 import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 /**
@@ -31,30 +33,34 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
     private MonthEventFetcher monthEventFetcher;
     private IDateCellViewDrawer cellViewDrawer;
     private boolean showDatesOutsideMonth;
-	private boolean decorateDatesOutsideMonth;
+    private boolean decorateDatesOutsideMonth;
+    private MonthViewPagerAdapter.CalendarType type;
+    private List<Date> datesWithEvents;
 
     private static final int SIX_WEEK_DAY_COUNT = 42;
 
 
-	public FlexibleCalendarGridAdapter(Context context, int year, int month,
-                                       boolean showDatesOutsideMonth, boolean decorateDatesOutsideMonth, int startDayOfTheWeek){
+    public FlexibleCalendarGridAdapter(Context context, int year, int month,
+                                       boolean showDatesOutsideMonth, boolean decorateDatesOutsideMonth, int startDayOfTheWeek, MonthViewPagerAdapter.CalendarType type, List<Date> datesWithEvents) {
         this.context = context;
         this.showDatesOutsideMonth = showDatesOutsideMonth;
-		this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
-        initialize(year,month,startDayOfTheWeek);
+        this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
+        this.type = type;
+        this.datesWithEvents = datesWithEvents;
+        initialize(year, month, startDayOfTheWeek);
     }
 
-    public void initialize(int year, int month, int startDayOfTheWeek){
+    public void initialize(int year, int month, int startDayOfTheWeek) {
         this.year = year;
         this.month = month;
-        this.monthDisplayHelper = new MonthDisplayHelper(year,month,startDayOfTheWeek);
+        this.monthDisplayHelper = new MonthDisplayHelper(year, month, startDayOfTheWeek);
         this.calendar = FlexibleCalendarHelper.getLocalizedCalendar(context);
     }
 
     @Override
     public int getCount() {
-        return showDatesOutsideMonth? SIX_WEEK_DAY_COUNT
-                :monthDisplayHelper.getNumberOfDaysInMonth()
+        return showDatesOutsideMonth ? SIX_WEEK_DAY_COUNT
+                : monthDisplayHelper.getNumberOfDaysInMonth()
                 + monthDisplayHelper.getWeekStartDay() + monthDisplayHelper.getFirstDayOfMonth() - 1;
     }
 
@@ -62,8 +68,8 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
     public Object getItem(int position) {
         //TODO implement
         int row = position / 7;
-        int col = position % 7 ;
-        return monthDisplayHelper.getDayAt(row,col);
+        int col = position % 7;
+        return monthDisplayHelper.getDayAt(row, col);
     }
 
     @Override
@@ -73,92 +79,126 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        int row = position/7;
-        int col = position%7;
+        int row = position / 7;
+        int col = position % 7;
 
         //checking if is within current month
-        boolean isWithinCurrentMonth = monthDisplayHelper.isWithinCurrentMonth(row,col);
+        boolean isWithinCurrentMonth = monthDisplayHelper.isWithinCurrentMonth(row, col);
 
         //compute cell type
         int cellType = BaseCellView.OUTSIDE_MONTH;
         //day at the current row and col
-        int day = monthDisplayHelper.getDayAt(row,col);
-        if(isWithinCurrentMonth){
-            //set to REGULAR if is within current month
-            cellType = BaseCellView.REGULAR;
-            if(selectedItem!= null && selectedItem.getYear()==year
-                    && selectedItem.getMonth()==month
-                    && selectedItem.getDay() ==day){
-                //selected
-                cellType = BaseCellView.SELECTED;
+        int day = monthDisplayHelper.getDayAt(row, col);
+
+        if (type == MonthViewPagerAdapter.CalendarType.Single) {
+            if (isWithinCurrentMonth) {
+                //set to REGULAR if is within current month
+                cellType = BaseCellView.REGULAR;
+                if (selectedItem != null && selectedItem.getYear() == year
+                        && selectedItem.getMonth() == month
+                        && selectedItem.getDay() == day) {
+                    //selected
+                    cellType = BaseCellView.SELECTED;
+                }
+                if (calendar.get(Calendar.YEAR) == year
+                        && calendar.get(Calendar.MONTH) == month
+                        && calendar.get(Calendar.DAY_OF_MONTH) == day) {
+                    if (cellType == BaseCellView.SELECTED) {
+                        //today and selected
+                        cellType = BaseCellView.SELECTED_TODAY;
+                    } else {
+                        //today
+                        cellType = BaseCellView.TODAY;
+                    }
+                }
             }
-            if(calendar.get(Calendar.YEAR)==year
-                    && calendar.get(Calendar.MONTH) == month
-                    && calendar.get(Calendar.DAY_OF_MONTH) == day){
-                if(cellType == BaseCellView.SELECTED){
-                    //today and selected
-                    cellType = BaseCellView.SELECTED_TODAY;
-                }else{
-                    //today
+
+            BaseCellView cellView = cellViewDrawer.getCellView(position, convertView, parent, cellType);
+            if (cellView == null) {
+                cellView = (BaseCellView) convertView;
+                if (cellView == null) {
+                    LayoutInflater inflater = LayoutInflater.from(context);
+                    cellView = (BaseCellView) inflater.inflate(R.layout.square_cell_layout, null);
+                }
+            }
+            drawDateCell(cellView, day, cellType);
+            return cellView;
+
+
+        } else {
+            if (isWithinCurrentMonth) {
+                //set to REGULAR if is within current month
+                cellType = BaseCellView.REGULAR;
+                if (datesWithEvents != null) {
+                    for (Date date : datesWithEvents) {
+                        Calendar cal = new GregorianCalendar();
+                        cal.setTime(date);
+
+                        if (cal.get(Calendar.DAY_OF_MONTH) == day && cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month) {
+                            cellType = BaseCellView.SELECTED;
+                        }
+                    }
+                }
+                if (selectedItem != null && selectedItem.getYear() == year
+                        && selectedItem.getMonth() == month
+                        && selectedItem.getDay() == day) {
+                    //selected
                     cellType = BaseCellView.TODAY;
                 }
             }
-        }
 
-        BaseCellView cellView = cellViewDrawer.getCellView(position, convertView, parent, cellType);
-        if(cellView==null){
-            cellView = (BaseCellView) convertView;
-            if(cellView == null){
-                LayoutInflater inflater = LayoutInflater.from(context);
-                cellView = (BaseCellView)inflater.inflate(R.layout.square_cell_layout,null);
+            BaseCellView cellView = cellViewDrawer.getCellView(position, convertView, parent, cellType);
+            if (cellView == null) {
+                cellView = (BaseCellView) convertView;
+                if (cellView == null) {
+                    LayoutInflater inflater = LayoutInflater.from(context);
+                    cellView = (BaseCellView) inflater.inflate(R.layout.square_cell_layout, null);
+                }
             }
+            drawDateCell(cellView, day, cellType);
+            return cellView;
         }
-        drawDateCell(cellView, day, cellType);
-        return cellView;
     }
 
-    private void drawDateCell(BaseCellView cellView,int day, int cellType){
+    private void drawDateCell(BaseCellView cellView, int day, int cellType) {
         cellView.clearAllStates();
-        if(cellType != BaseCellView.OUTSIDE_MONTH) {
+        if (cellType != BaseCellView.OUTSIDE_MONTH) {
             cellView.setText(String.valueOf(day));
             cellView.setOnClickListener(new DateClickListener(day, month, year));
             // add events
-            if(monthEventFetcher!=null){
+            if (monthEventFetcher != null) {
                 cellView.setEvents(monthEventFetcher.getEventsForTheDay(year, month, day));
             }
-            switch (cellType){
-                case BaseCellView.SELECTED_TODAY:
-        	    cellView.addState(BaseCellView.STATE_TODAY);
-        	    cellView.addState(BaseCellView.STATE_SELECTED);
-        	    break;
+            switch (cellType) {
                 case BaseCellView.TODAY:
                     cellView.addState(BaseCellView.STATE_TODAY);
                     break;
+                case BaseCellView.SELECTED_TODAY:
                 case BaseCellView.SELECTED:
                     cellView.addState(BaseCellView.STATE_SELECTED);
                     break;
                 default:
                     cellView.addState(BaseCellView.STATE_REGULAR);
             }
-        }else{
-            if(showDatesOutsideMonth){
+        } else {
+            if (showDatesOutsideMonth) {
                 cellView.setText(String.valueOf(day));
                 int[] temp = new int[2];
                 //date outside month and less than equal to 12 means it belongs to next month otherwise previous
-                if(day<=12){
-                    FlexibleCalendarHelper.nextMonth(year,month,temp);
+                if (day <= 12) {
+                    FlexibleCalendarHelper.nextMonth(year, month, temp);
                     cellView.setOnClickListener(new DateClickListener(day, temp[1], temp[0]));
-                }else{
+                } else {
                     FlexibleCalendarHelper.previousMonth(year, month, temp);
                     cellView.setOnClickListener(new DateClickListener(day, temp[1], temp[0]));
                 }
 
-				if(decorateDatesOutsideMonth && monthEventFetcher!=null){
-					cellView.setEvents(monthEventFetcher.getEventsForTheDay(temp[0], temp[1], day));
-				}
+                if (decorateDatesOutsideMonth && monthEventFetcher != null) {
+                    cellView.setEvents(monthEventFetcher.getEventsForTheDay(temp[0], temp[1], day));
+                }
 
-				cellView.addState(BaseCellView.STATE_OUTSIDE_MONTH);
-            } else{
+                cellView.addState(BaseCellView.STATE_OUTSIDE_MONTH);
+            } else {
                 cellView.setBackgroundResource(android.R.color.transparent);
                 cellView.setText(null);
                 cellView.setOnClickListener(null);
@@ -167,21 +207,21 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
         cellView.refreshDrawableState();
     }
 
-    public int getYear(){
+    public int getYear() {
         return year;
     }
 
-    public int getMonth(){
+    public int getMonth() {
         return month;
     }
 
-    private class DateClickListener implements View.OnClickListener{
+    private class DateClickListener implements View.OnClickListener {
 
         private int iDay;
         private int iMonth;
         private int iYear;
 
-        public DateClickListener(int day, int month, int year){
+        public DateClickListener(int day, int month, int year) {
             this.iDay = day;
             this.iMonth = month;
             this.iYear = year;
@@ -189,11 +229,11 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
 
         @Override
         public void onClick(final View v) {
-            selectedItem = new SelectedDateItem(iYear,iMonth,iDay);
+            selectedItem = new SelectedDateItem(iYear, iMonth, iDay);
 
             notifyDataSetChanged();
 
-            if(onDateCellItemClickListener !=null){
+            if (onDateCellItemClickListener != null) {
                 onDateCellItemClickListener.onDateClick(selectedItem);
             }
 
@@ -205,42 +245,42 @@ class FlexibleCalendarGridAdapter extends BaseAdapter {
     }
 
     interface MonthEventFetcher {
-        List<? extends Event> getEventsForTheDay(int year,int month,int day);
+        List<? extends Event> getEventsForTheDay(int year, int month, int day);
     }
 
-    public void setOnDateClickListener(OnDateCellItemClickListener onDateCellItemClickListener){
+    public void setOnDateClickListener(OnDateCellItemClickListener onDateCellItemClickListener) {
         this.onDateCellItemClickListener = onDateCellItemClickListener;
     }
 
-    public void setSelectedItem(SelectedDateItem selectedItem, boolean notify){
+    public void setSelectedItem(SelectedDateItem selectedItem, boolean notify) {
         this.selectedItem = selectedItem;
-        if(notify) notifyDataSetChanged();
+        if (notify) notifyDataSetChanged();
     }
 
-    public SelectedDateItem getSelectedItem(){
+    public SelectedDateItem getSelectedItem() {
         return selectedItem;
     }
 
-    void setMonthEventFetcher(MonthEventFetcher monthEventFetcher){
+    void setMonthEventFetcher(MonthEventFetcher monthEventFetcher) {
         this.monthEventFetcher = monthEventFetcher;
     }
 
-    public void setCellViewDrawer(IDateCellViewDrawer cellViewDrawer){
+    public void setCellViewDrawer(IDateCellViewDrawer cellViewDrawer) {
         this.cellViewDrawer = cellViewDrawer;
     }
 
-    public void setShowDatesOutsideMonth(boolean showDatesOutsideMonth){
+    public void setShowDatesOutsideMonth(boolean showDatesOutsideMonth) {
         this.showDatesOutsideMonth = showDatesOutsideMonth;
         this.notifyDataSetChanged();
     }
 
-	public void setDecorateDatesOutsideMonth(boolean decorateDatesOutsideMonth) {
-		this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
-		this.notifyDataSetChanged();
-	}
+    public void setDecorateDatesOutsideMonth(boolean decorateDatesOutsideMonth) {
+        this.decorateDatesOutsideMonth = decorateDatesOutsideMonth;
+        this.notifyDataSetChanged();
+    }
 
-    public void setFirstDayOfTheWeek(int firstDayOfTheWeek){
-        monthDisplayHelper = new MonthDisplayHelper(year,month,firstDayOfTheWeek);
+    public void setFirstDayOfTheWeek(int firstDayOfTheWeek) {
+        monthDisplayHelper = new MonthDisplayHelper(year, month, firstDayOfTheWeek);
         this.notifyDataSetChanged();
     }
 
